@@ -9,8 +9,9 @@
 void mouseMovement(int x, int y);
 void updateCameraDirection();
 void setupPlane();
+void setupSkybox();
 
-GLuint planeVBO;
+GLuint planeVBO, skyboxVBO;
 int planeVertexCount;
 
 float camX = 0.0f;
@@ -70,6 +71,103 @@ void updateCameraDirection()
 
     frontZ = sin(yaw * 3.14159265f / 180.0f) *
              cos(pitch * 3.14159265f / 180.0f);
+}
+
+void setupSkybox()
+{
+  float size = 50.0f;
+
+  GLfloat skyboxVertices[] = {
+      -size,  size, -size,
+      -size, -size, -size,
+       size, -size, -size,
+       size, -size, -size,
+       size,  size, -size,
+      -size,  size, -size,
+
+      -size, -size,  size,
+      -size, -size, -size,
+      -size,  size, -size,
+      -size,  size, -size,
+      -size,  size,  size,
+      -size, -size,  size,
+
+       size, -size, -size,
+       size, -size,  size,
+       size,  size,  size,
+       size,  size,  size,
+       size,  size, -size,
+       size, -size, -size,
+
+      -size, -size,  size,
+      -size,  size,  size,
+       size,  size,  size,
+       size,  size,  size,
+       size, -size,  size,
+      -size, -size,  size,
+
+      -size,  size, -size,
+       size,  size, -size,
+       size,  size,  size,
+       size,  size,  size,
+      -size,  size,  size,
+      -size,  size, -size,
+
+      -size, -size, -size,
+      -size, -size,  size,
+       size, -size,  size,
+       size, -size,  size,
+       size, -size, -size,
+      -size, -size, -size
+    };
+
+    glGenBuffers(1, &skyboxVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+
+    glBufferData(
+        GL_ARRAY_BUFFER,
+        sizeof(skyboxVertices),
+        skyboxVertices,
+        GL_STATIC_DRAW
+    );
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+void drawSkybox()
+{   
+    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+
+    if (!glIsBuffer(skyboxVBO))
+    {
+        std::cout << "Invalid Skybox VBO!" << std::endl;
+        return;
+    }
+
+    glEnableClientState(GL_VERTEX_ARRAY);
+      glVertexPointer(3, GL_FLOAT, 0, (void*)0);
+
+      glColor3ub(61, 66, 85); // Back Face
+      glDrawArrays(GL_TRIANGLES, 0, 6);
+
+      glColor3ub(28, 35, 53); // Left Face
+      glDrawArrays(GL_TRIANGLES, 6, 6);
+
+      glColor3ub(20, 25, 44); // Right Face
+      glDrawArrays(GL_TRIANGLES, 12, 6);
+
+      glColor3ub(20, 25, 44); // Front Face
+      glDrawArrays(GL_TRIANGLES, 18, 6);
+
+      glColor3ub(19, 27, 40); // Top Face
+      glDrawArrays(GL_TRIANGLES, 24, 6);
+
+      glColor3ub(0, 0, 0); // Bottom Face
+      glDrawArrays(GL_TRIANGLES, 30, 6);
+
+    glDisableClientState(GL_VERTEX_ARRAY);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void setupPlane()
@@ -142,6 +240,11 @@ void display()
         camX + frontX, camY + frontY, camZ + frontZ,
         0.0f, 1.0f, 0.0f
     );
+
+    glPushMatrix();
+        glTranslatef(camX, camY, camZ);
+        drawSkybox();
+    glPopMatrix();
 
     drawPlane();
 
@@ -246,6 +349,12 @@ void reshape(int w, int h)
     glMatrixMode(GL_MODELVIEW);
 }
 
+void setupLogic()
+{
+  setupPlane();
+  setupSkybox();
+}
+
 void sceneLogic()
 {
     movementLogic();
@@ -265,7 +374,7 @@ int main(int argc, char** argv)
     glutFullScreen();
     glEnable(GL_DEPTH_TEST);
 
-    setupPlane();
+    setupLogic();
     glutSetCursor(GLUT_CURSOR_NONE);
     glutWarpPointer(400, 300);
 
