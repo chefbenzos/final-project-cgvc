@@ -158,14 +158,12 @@ void movementLogic()
     if (wPressed)
     {
         camX += frontX * speed;
-        camY += frontY * speed;
         camZ += frontZ * speed;
     }
 
     if (sPressed)
     {
         camX -= frontX * speed;
-        camY -= frontY * speed;
         camZ -= frontZ * speed;
     }
 
