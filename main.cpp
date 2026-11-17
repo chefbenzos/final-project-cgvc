@@ -235,14 +235,13 @@ void drawPlane()
 //
 // You start at (0, 0, 0) looking toward -Z.
 //
-//   z = -20   cliff edge
 //   z = -5    campfire
 //   z = -3    left tent (x = -8)    right tent (x = 8)
 //   z = 0     player spawn
 //   z = 15    entrance sign
 //
 // The clearing is the square from -12 to 12 in x and z.
-// Trees are placed randomly outside of the clearing.
+// The grass fills the whole sky box. Trees are placed randomly outside of the clearing.
 // ====================================================
 
 GLuint cubeVBO, pyramidVBO, prismVBO;
@@ -251,7 +250,7 @@ GLuint cubeVBO, pyramidVBO, prismVBO;
 float fireTime = 0.0f;
 
 // settings for the random trees
-const int MAX_TREES = 30; // number of trees
+const int MAX_TREES = 180; // number of trees
 float treeX[MAX_TREES];
 float treeZ[MAX_TREES];
 float treeScale[MAX_TREES];
@@ -341,17 +340,12 @@ void setupTrees() //claude
     {
         tries++;
 
-        float x = randomRange(-19.0f, 19.0f);
-        float z = randomRange(-19.0f, 19.0f);
+        // the whole sky box (it goes from -50 to 50)
+        float x = randomRange(-48.0f, 48.0f);
+        float z = randomRange(-48.0f, 48.0f);
 
         // not inside the clearing
         if (fabs(x) < 12.0f && fabs(z) < 12.0f)
-        {
-            continue;
-        }
-
-        // keep the cliff side open so the view is not blocked
-        if (z < -15.0f)
         {
             continue;
         }
@@ -499,21 +493,11 @@ void drawPrism(float x, float y, float z, float sx, float sy, float sz,
 // green grass for the whole plane, with a lighter green clearing in the middle
 void drawGround()
 {
-    // grass
-    drawCube(0.0f, -0.03f, 0.0f, 40.0f, 0.015f, 40.0f, 90, 160, 70);
+    // grass (a little smaller than the sky box so it does not touch the sky walls)
+    drawCube(0.0f, -0.03f, 0.0f, 99.0f, 0.015f, 99.0f, 90, 160, 70);
 
     // clearing around the spawn
     drawCube(0.0f, -0.02f, 0.0f, 24.0f, 0.015f, 24.0f, 115, 180, 90);
-}
-
-// the ground ends at z = -20, with a big drop after it
-void drawCliff()
-{
-    // rock edge
-    drawCube(0.0f, -0.2f, -20.2f, 40.0f, 0.2f, 0.4f, 110, 95, 70);
-
-    // ground far below
-    drawCube(0.0f, -26.0f, -33.0f, 80.0f, 1.0f, 26.0f, 28, 60, 45);
 }
 
 // one flame piece. It grows and shrinks with the time (sin goes up and down)
@@ -628,7 +612,6 @@ void drawLanterns()
 void drawCampsite()
 {
     drawGround();
-    drawCliff();
 
     drawCampfire(0.0f, -5.0f);
 
