@@ -106,6 +106,12 @@ float camX = 0.0f, camZ = 0.0f;
 float yaw = -90.0f, pitch = 0.0f;
 int   winW = 1280, winH = 720;
 bool  fullscreen = false;
+bool  firstMouse = true;
+float sensitivity = 0.1f;
+float frontX, frontY, frontZ;
+
+// movement
+bool wPressed = false, aPressed = false, sPressed = false, dPressed = false;
 
 // VBO ids (Module 5)
 GLuint cubeVBO, pyramidVBO, prismVBO;
@@ -170,9 +176,12 @@ void drawHUD();
 
 void display();
 void reshape(int w, int h);
-void keyboard(unsigned char key, int x, int y);
+void keyboardPress(unsigned char key, int x, int y);
+void keyboardRelease(unsigned char key, int x, int y);
+void movementLogic();
 void mouse(int button, int state, int x, int y);
 void mouseMovement(int x, int y);
+void updateCameraDirection();
 void timer(int value);
 
 // ----------------------------------------------------------------------------
@@ -1074,21 +1083,15 @@ void reshape(int w, int h)
     glMatrixMode(GL_MODELVIEW);
 }
 
-// ============================================================================
-//  INPUT (Module 3: keyboard, mouse and passive motion callbacks)
-// ============================================================================
-void keyboard(unsigned char key, int x, int y)
+void keyboardPress(unsigned char key, int x, int y)
 {
-    float yr = yaw * PI / 180.0f;
-    float step = 0.25f;
-
     switch (key)
     {
-        case 'w':  camX += cosf(yr) * step;  camZ += sinf(yr) * step;  break;   // forward
-        case 's':  camX -= cosf(yr) * step;  camZ -= sinf(yr) * step;  break;   // backward
-        case 'a':  camX += sinf(yr) * step;  camZ -= cosf(yr) * step;  break;   // left
-        case 'd':  camX -= sinf(yr) * step;  camZ += cosf(yr) * step;  break;   // right
-
+        case 'w': wPressed = true; break;
+        case 's': sPressed = true; break;
+        case 'a': aPressed = true; break;
+        case 'd': dPressed = true; break;
+        
         case ' ':  paused = !paused;  break;                  // pause / resume the clock
         case 'r':  sceneTime = 0.0f;  break;                  // restart the timeline
         case 'c':  camX = 0.0f; camZ = 0.0f; yaw = -90.0f; pitch = 0.0f;  break;
@@ -1100,9 +1103,49 @@ void keyboard(unsigned char key, int x, int y)
             if (!fullscreen) glutFullScreen();
             else { glutReshapeWindow(1024, 768); glutPositionWindow(100, 50); }
             fullscreen = !fullscreen;
-            break;
+            break; 
 
-        case 27:   exit(0);                                   // ESC
+        case 27:   exit(0);   
+    }
+}
+
+void keyboardRelease(unsigned char key, int x, int y)
+{
+    switch (key)
+    {
+        case 'w': wPressed = false; break;
+        case 's': sPressed = false; break;
+        case 'a': aPressed = false; break;
+        case 'd': dPressed = false; break;
+    }
+}
+
+// ============================================================================
+//  INPUT (Module 3: keyboard, mouse and passive motion callbacks)
+// ============================================================================
+void movementLogic()
+{
+    float yr = yaw * PI / 180.0f;
+    float step = 0.00000075f;
+
+    if (wPressed)
+    {
+        camX += cosf(yr) * step;  camZ += sinf(yr) * step;
+    }
+
+    if (aPressed)
+    {
+        camX += sinf(yr) * step;  camZ -= cosf(yr) * step;
+    }
+
+    if (sPressed)
+    {
+        camX -= cosf(yr) * step;  camZ -= sinf(yr) * step;
+    }
+
+    if (dPressed)
+    {
+        camX -= sinf(yr) * step;  camZ += cosf(yr) * step; 
     }
 }
 
@@ -1122,10 +1165,44 @@ void mouse(int button, int state, int x, int y)
 //   top of the window = look straight up, bottom = look down
 void mouseMovement(int x, int y)
 {
-    yaw = -90.0f + (x - winW / 2.0f) * 360.0f / winW;
-    pitch = (winH / 2.0f - y) / (winH / 2.0f) * 89.0f;
-    if (pitch > 89.0f)  pitch = 89.0f;
-    if (pitch < -89.0f) pitch = -89.0f;
+    int centerX = glutGet(GLUT_WINDOW_WIDTH) / 2;
+    int centerY = glutGet(GLUT_WINDOW_HEIGHT) / 2;
+
+    if (firstMouse)
+    {
+        glutWarpPointer(centerX, centerY);
+        firstMouse = false;
+        return;
+    }
+
+    float offsetX = x - centerX;
+    float offsetY = centerY - y;
+
+    yaw += offsetX * sensitivity;
+    pitch += offsetY * sensitivity;
+
+    if (pitch > 89.0f)
+        pitch = 89.0f;
+
+    if (pitch < -89.0f)
+        pitch = -89.0f;
+
+    updateCameraDirection();
+
+    glutWarpPointer(centerX, centerY);
+
+    glutPostRedisplay();
+}
+
+void updateCameraDirection()
+{
+    frontX = cos(yaw * 3.14159265f / 180.0f) *
+             cos(pitch * 3.14159265f / 180.0f);
+
+    frontY = sin(pitch * 3.14159265f / 180.0f);
+
+    frontZ = sin(yaw * 3.14159265f / 180.0f) *
+             cos(pitch * 3.14159265f / 180.0f);
 }
 
 // ============================================================================
@@ -1157,7 +1234,9 @@ int main(int argc, char **argv)
 
     glutDisplayFunc(display);
     glutReshapeFunc(reshape);
-    glutKeyboardFunc(keyboard);
+    glutKeyboardFunc(keyboardPress);
+    glutKeyboardUpFunc(keyboardRelease);
+    glutIdleFunc(movementLogic);
     glutMouseFunc(mouse);
     glutPassiveMotionFunc(mouseMovement);
 
