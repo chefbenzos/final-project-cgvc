@@ -110,6 +110,13 @@ bool  firstMouse = true;
 float sensitivity = 0.1f;
 float frontX, frontY, frontZ;
 
+// movement borders (the player cannot leave the ground area)
+float minX = -20.0f;
+float maxX =  20.0f;
+float minZ = -20.0f;
+float maxZ =  20.0f;
+
+
 // movement
 bool wPressed = false, aPressed = false, sPressed = false, dPressed = false;
 
@@ -143,6 +150,18 @@ float exColor[NUM_EXTRA][3] = {
     { 0.75f, 0.88f, 1.0f }, { 0.70f, 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f },
     { 0.85f, 0.75f, 1.0f }, { 0.90f, 0.95f, 1.0f }, { 0.75f, 0.85f, 1.0f } };
 
+// ---- the forest: trees placed at random (from the campsite extension) ----
+// The first 12 trees are the original fixed ones. The rest are random.
+const int   GROUND_HALF    = 50;      // the ground goes from -50 to +50 in X and Z (100 m x 100 m)
+const int   MAX_TREES      = 180;     // maximum number of trees
+const float TREE_AREA      = 48.0f;   // trees stay inside +-48 m (the ground is +-50 m)
+const float MIN_TREE_DIST  = 3.0f;    // minimum distance between two trees
+int   treeSeed = 25;                  // change this number to get a different forest
+float treeX[MAX_TREES];
+float treeZ[MAX_TREES];
+float treeScale[MAX_TREES];
+int   treeCount = 0;
+
 // normals of the faces of our shapes (used by the lighting)
 float cubeNormals[6][3] = {
     { 0, 0, -1 }, { -1, 0, 0 }, { 1, 0, 0 }, { 0, 0, 1 }, { 0, 1, 0 }, { 0, -1, 0 } };
@@ -158,6 +177,7 @@ void setupTextures();
 void setupShapes();
 void initializeStars();
 void initializeClouds();
+void setupTrees();
 
 void updateGlobalSceneTime(float dt);
 void updateStars();
@@ -172,6 +192,7 @@ void drawAdditionalMeteors();
 void drawExplosion();
 void drawGround();
 void drawCampsite();
+void drawTrees();
 void drawHUD();
 
 void display();
@@ -304,6 +325,7 @@ void initializeOpenGL()
     setupShapes();
     initializeStars();
     initializeClouds();
+    setupTrees();              // last: it calls srand() again, so it must come after the stars and clouds
 }
 
 // ---- Module 8: lighting ----
@@ -450,6 +472,78 @@ void initializeClouds()
         cloudZ[i] = -dist * cosf(a);
         cloudY[i] = EYE_HEIGHT + dist * tanf(elev * PI / 180.0f);
         cloudAz[i] = az;
+    }
+}
+
+// the trees: the 12 original trees stay, then random trees fill the forest.
+// A random spot is rejected when it is
+//   - inside the central clearing (|x| and |z| smaller than 12)
+//   - on the entrance path (in front of the sign)
+//   - too close to another tree or to a rock
+void setupTrees()
+{
+    // the original fixed trees (they are kept exactly as they were)
+    float fixedX[12] = { -16, -17, -15, -17, -14, 15, 17, 16, 14, 17, -8, 9 };
+    float fixedZ[12] = { -10,  -4,   3,  10,  15, -12, -5,  2,  9, 14, 17, 17 };
+    float fixedS[12] = { 1.0f, 1.2f, 0.9f, 1.3f, 1.0f, 1.1f, 0.8f, 1.2f, 1.0f, 0.9f, 1.1f, 1.3f };
+    for (int i = 0; i < 12; i++)
+    {
+        treeX[treeCount] = fixedX[i];
+        treeZ[treeCount] = fixedZ[i];
+        treeScale[treeCount] = fixedS[i];
+        treeCount++;
+    }
+
+    // the rocks of drawCampsite() (only used so no tree grows inside a rock)
+    float rockX[6] = { -15, -15, 15, 15, -10, 11 };
+    float rockZ[6] = {  -8,   4, -9,  2, -18, -18 };
+
+    srand(treeSeed);
+
+    int attempts = 0;
+    while (treeCount < MAX_TREES && attempts < 5000)
+    {
+        attempts++;
+
+        // a possible spot on the ground
+        float x = randomRange(-TREE_AREA, TREE_AREA);
+        float z = randomRange(-TREE_AREA, TREE_AREA);
+
+        // inside the clearing: try again
+        if (fabsf(x) < 12.0f && fabsf(z) < 12.0f)
+            continue;
+
+        // entrance path: try again
+        if (fabsf(x) < 4.5f && z > 12.0f)
+            continue;
+
+        // too close to a tree that is already placed?
+        bool tooClose = false;
+        for (int i = 0; i < treeCount; i++)
+        {
+            float dx = x - treeX[i];
+            float dz = z - treeZ[i];
+            if (dx * dx + dz * dz < MIN_TREE_DIST * MIN_TREE_DIST)
+                tooClose = true;
+        }
+
+        // too close to a rock?
+        for (int i = 0; i < 6; i++)
+        {
+            float dx = x - rockX[i];
+            float dz = z - rockZ[i];
+            if (dx * dx + dz * dz < 2.5f * 2.5f)
+                tooClose = true;
+        }
+
+        if (tooClose)
+            continue;
+
+        // accepted: keep the spot and choose a size
+        treeX[treeCount] = x;
+        treeZ[treeCount] = z;
+        treeScale[treeCount] = randomRange(0.8f, 1.3f);
+        treeCount++;
     }
 }
 
@@ -873,9 +967,9 @@ void drawGround()
     glBindTexture(GL_TEXTURE_2D, grassTexture);
     glNormal3f(0.0f, 1.0f, 0.0f);
 
-    for (int ix = -20; ix < 20; ix += 2)
+    for (int ix = -GROUND_HALF; ix < GROUND_HALF; ix += 2)
     {
-        for (int iz = -20; iz < 20; iz += 2)
+        for (int iz = -GROUND_HALF; iz < GROUND_HALF; iz += 2)
         {
             // lighter green inside the clearing (|x| and |z| smaller than 12)
             if (ix >= -12 && ix < 12 && iz >= -12 && iz < 12) setColor(1.0f, 1.0f, 1.0f);
@@ -934,6 +1028,13 @@ void drawPineTree(float x, float z, float s)
     drawPyramid(x, 2.4f * s, z, 2.0f * s, 1.8f * s, 2.0f * s, 36, 105, 58);       // upper leaves
 }
 
+// draws all the trees from setupTrees()
+void drawTrees()
+{
+    for (int i = 0; i < treeCount; i++)
+        drawPineTree(treeX[i], treeZ[i], treeScale[i]);
+}
+
 void drawLantern(float x, float z)
 {
     drawCube(x, 0.0f, z, 0.1f, 1.6f, 0.1f, 70, 45, 25);                  // post
@@ -948,9 +1049,11 @@ void drawCampsite()
 {
     drawGround();
 
-    // cliff: the ground ends at z = -20
-    drawCube(0.0f, -0.2f, -20.2f, 40.0f, 0.2f, 0.4f, 110, 95, 70);
-    drawCube(0.0f, -26.0f, -33.0f, 80.0f, 1.0f, 26.0f, 28, 60, 45);
+    // cliff: the ground ends at z = -GROUND_HALF (-50)
+    // edge strip: as wide as the ground, right behind the last row of tiles
+    drawCube(0.0f, -0.2f, -GROUND_HALF - 0.2f, 2.0f * GROUND_HALF, 0.2f, 0.4f, 110, 95, 70);
+    // the far ground below the cliff (same depth 26 and twice the ground width, as before)
+    drawCube(0.0f, -26.0f, -GROUND_HALF - 13.0f, 4.0f * GROUND_HALF, 1.0f, 26.0f, 28, 60, 45);
 
     drawCampfire(0.0f, -5.0f);
 
@@ -970,12 +1073,8 @@ void drawCampsite()
     drawLantern(-3.0f, 15.0f);
     drawLantern( 3.0f, 15.0f);
 
-    // trees (fixed positions, outside the clearing)
-    float treeX[12] = { -16, -17, -15, -17, -14, 15, 17, 16, 14, 17, -8, 9 };
-    float treeZ[12] = { -10,  -4,   3,  10,  15, -12, -5,  2,  9, 14, 17, 17 };
-    float treeS[12] = { 1.0f, 1.2f, 0.9f, 1.3f, 1.0f, 1.1f, 0.8f, 1.2f, 1.0f, 0.9f, 1.1f, 1.3f };
-    for (int i = 0; i < 12; i++)
-        drawPineTree(treeX[i], treeZ[i], treeS[i]);
+    // trees (the 12 original ones + the random ones, see setupTrees)
+    drawTrees();
 
     // rocks
     drawPyramid(-15.0f, 0.0f,  -8.0f, 1.4f, 1.0f, 1.2f, 110, 110, 115);
@@ -1126,7 +1225,7 @@ void keyboardRelease(unsigned char key, int x, int y)
 void movementLogic()
 {
     float yr = yaw * PI / 180.0f;
-    float step = 0.00000075f;
+    float step = 0.0000025f;
 
     if (wPressed)
     {
@@ -1147,6 +1246,18 @@ void movementLogic()
     {
         camX -= sinf(yr) * step;  camZ += cosf(yr) * step; 
     }
+
+    if (camX < minX)
+        camX = minX;
+
+    if (camX > maxX)
+        camX = maxX;
+
+    if (camZ < minZ)
+        camZ = minZ;
+
+    if (camZ > maxZ)
+        camZ = maxZ;
 }
 
 // left click = forward in time, right click = back, mouse wheel = forward / back
