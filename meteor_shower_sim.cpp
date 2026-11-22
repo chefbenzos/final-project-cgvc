@@ -114,6 +114,7 @@ float cubeNormals[6][3] = {
 float pyramidNormals[4][3] = {
     { 0, 0.5f, -1 }, { 1, 0.5f, 0 }, { 0, 0.5f, 1 }, { -1, 0.5f, 0 } };
 
+// Scene Setup Functions
 void initializeOpenGL();
 void setupLighting();
 void setupTextures();
@@ -126,6 +127,7 @@ void updateGlobalSceneTime(float dt);
 void updateStars();
 void updateMeteorLighting();
 
+// Scene Drawing Functions
 void drawNightSky();
 void drawStars();
 void drawClouds();
@@ -138,6 +140,7 @@ void drawCampsite();
 void drawTrees();
 void drawHUD();
 
+// Main Display Functions and Keyboard and Mouse Callbacks
 void display();
 void reshape(int w, int h);
 void keyboardPress(unsigned char key, int x, int y);
