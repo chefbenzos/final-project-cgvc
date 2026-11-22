@@ -1,51 +1,3 @@
-// ============================================================================
-//  NIGHT CAMPSITE WITH A METEOR SKY            (student version)
-//  Introduction to Computer Graphics and Visual Computing
-//
-//  Everything in this program comes from the course modules:
-//    Module 1  GLUT window, display callback, glutMainLoop
-//    Module 2  primitives: points, lines, triangles, quads, fans, quad strips
-//    Module 3  callbacks (keyboard, mouse, passive motion, timer), text, fullscreen
-//    Module 4  vertex arrays (glVertexPointer, glColorPointer, glDrawArrays)
-//    Module 5  Vertex Buffer Objects with GLEW (glGenBuffers, glBufferData ...)
-//    Module 6  matrix ideas, 3D shapes made of quads and triangles, color arrays
-//    Module 7  glTranslatef / glRotatef / glScalef, glPushMatrix / glPopMatrix,
-//              gluPerspective, gluLookAt, depth test
-//    Module 8  lighting (ambient, diffuse, point / directional / spot lights,
-//              attenuation, glMaterialfv emission) and texture mapping
-//
-//  THE PLAN OF THE SCENE
-//    - A night campsite on the ground: two tents, a campfire, trees, rocks,
-//      lanterns, a sign and a cliff edge.
-//    - A night sky with stars and clouds.
-//    - The MAIN METEOR crosses the whole sky from 0 to 180 degrees (rear horizon,
-//      straight overhead, front horizon). It never lands.
-//    - A SMALL METEOR starts next to the main meteor, then slowly leaves it and
-//      lands on the ground in front of the tent. This is the only landing.
-//    - The landing makes an EXPLOSION and a WHITE FLASH, then the scene restarts.
-//    - Fast pale METEORS fly around the sky.
-//    - Everything is controlled by ONE time variable: sceneTime. The meteors keep
-//      moving even when you look somewhere else.
-//
-//  COORDINATES: +Y is up, the ground is y = 0, NORTH is -Z.
-//    The player starts at (0, 2, 0) looking north. The left tent is at (-8, 0, -3)
-//    and its door faces the campfire (+X). The landing point is in front of it.
-//
-//  CONTROLS
-//    W A S D        walk
-//    mouse          look around (mouse left/right = turn, up/down = look up/down)
-//    [  ]           timeline back / forward  (left click = forward, right click =
-//                   back, mouse wheel also works)
-//    SPACE          pause / resume the clock
-//    R              restart the timeline
-//    C              go back to the start position
-//    F              fullscreen <-> window
-//    ESC            quit
-//
-//  Compile with the course setup (VS Code, Ctrl + Shift + B).
-//  Libraries: FreeGLUT + GLEW (GLEW is used only for the VBO functions, Module 5).
-// ============================================================================
-
 #define GLEW_STATIC
 #include <GL/glew.h>
 #include <GL/glut.h>
@@ -55,9 +7,7 @@
 #include <cstdlib>
 using namespace std;
 
-// ----------------------------------------------------------------------------
 //  CONSTANTS
-// ----------------------------------------------------------------------------
 const float PI         = 3.14159265f;
 const float EYE_HEIGHT = 2.0f;
 
@@ -90,9 +40,6 @@ const int NUM_STARS = NUM_SMALL + NUM_BIG;
 const int NUM_CLOUDS = 18;
 const int NUM_EXTRA  = 6;
 
-// ----------------------------------------------------------------------------
-//  GLOBAL VARIABLES
-// ----------------------------------------------------------------------------
 // time
 float sceneTime = 0.0f;       // the global timeline (0 .. DURATION)
 float skyTime   = 0.0f;       // the time used by the sky objects (see updateGlobalSceneTime)
@@ -150,7 +97,6 @@ float exColor[NUM_EXTRA][3] = {
     { 0.75f, 0.88f, 1.0f }, { 0.70f, 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f },
     { 0.85f, 0.75f, 1.0f }, { 0.90f, 0.95f, 1.0f }, { 0.75f, 0.85f, 1.0f } };
 
-// ---- the forest: trees placed at random (from the campsite extension) ----
 // The first 12 trees are the original fixed ones. The rest are random.
 const int   GROUND_HALF    = 50;      // the ground goes from -50 to +50 in X and Z (100 m x 100 m)
 const int   MAX_TREES      = 180;     // maximum number of trees
@@ -168,9 +114,6 @@ float cubeNormals[6][3] = {
 float pyramidNormals[4][3] = {
     { 0, 0.5f, -1 }, { 1, 0.5f, 0 }, { 0, 0.5f, 1 }, { -1, 0.5f, 0 } };
 
-// ----------------------------------------------------------------------------
-//  FUNCTION PROTOTYPES
-// ----------------------------------------------------------------------------
 void initializeOpenGL();
 void setupLighting();
 void setupTextures();
@@ -205,17 +148,12 @@ void mouseMovement(int x, int y);
 void updateCameraDirection();
 void timer(int value);
 
-// ----------------------------------------------------------------------------
-//  SMALL HELPER FUNCTIONS
-// ----------------------------------------------------------------------------
 float randomRange(float minValue, float maxValue)
 {
     float t = rand() / (float)RAND_MAX;
     return minValue + t * (maxValue - minValue);
 }
 
-// smoothstep: 0 before a, 1 after b, and a smooth "S" curve in between.
-// We use it to start and stop movements gently (no sudden jumps).
 float smoothstep(float a, float b, float x)
 {
     float t = (x - a) / (b - a);
@@ -328,7 +266,6 @@ void initializeOpenGL()
     setupTrees();              // last: it calls srand() again, so it must come after the stars and clouds
 }
 
-// ---- Module 8: lighting ----
 // We use 6 lights:
 //   LIGHT0  main meteor head      (point light, blue-white)
 //   LIGHT1  campfire              (point light, orange, flickers, attenuation)
@@ -361,7 +298,6 @@ void setupLighting()
     glLightf(GL_LIGHT5, GL_QUADRATIC_ATTENUATION, 0.006f);
 }
 
-// ---- Module 8: texture mapping ----
 // We make a small 64 x 64 "grass" picture ourselves (no image file needed).
 void setupTextures()
 {
@@ -386,9 +322,6 @@ void setupTextures()
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 }
 
-// ---- Module 5: Vertex Buffer Objects ----
-// The cube, the pyramid and the tent prism are stored ONCE in video memory.
-// Every tent, tree, rock ... reuses them with glTranslatef / glScalef.
 void makeVBO(GLuint *id, float *data, int numFloats)
 {
     glGenBuffers(1, id);
@@ -426,7 +359,6 @@ void setupShapes()
     makeVBO(&prismVBO, prism, 42);
 }
 
-// ---- Module 4: vertex arrays (the stars) ----
 void initializeStars()
 {
     const float R = 190.0f;                       // the stars are on a big sphere
@@ -1219,9 +1151,6 @@ void keyboardRelease(unsigned char key, int x, int y)
     }
 }
 
-// ============================================================================
-//  INPUT (Module 3: keyboard, mouse and passive motion callbacks)
-// ============================================================================
 void movementLogic()
 {
     float yr = yaw * PI / 180.0f;
@@ -1316,10 +1245,6 @@ void updateCameraDirection()
              cos(pitch * 3.14159265f / 180.0f);
 }
 
-// ============================================================================
-//  TIMER (Module 3: glutTimerFunc): called about 60 times per second.
-//  It always advances the clock and updates the meteors, whatever the camera does.
-// ============================================================================
 void timer(int value)
 {
     int now = glutGet(GLUT_ELAPSED_TIME);        // milliseconds since the program started
