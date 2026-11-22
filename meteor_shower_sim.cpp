@@ -1069,7 +1069,6 @@ void display()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // camera (Module 7: gluLookAt)
     float yr = yaw * PI / 180.0f;
     float pr = pitch * PI / 180.0f;
     glMatrixMode(GL_MODELVIEW);
@@ -1279,7 +1278,7 @@ int main(int argc, char **argv)
     glutMouseFunc(mouse);
     glutPassiveMotionFunc(mouseMovement);
 
-    GLenum err = glewInit();                     // needed for the VBO functions (Module 5)
+    GLenum err = glewInit();
     if (err == GLEW_OK)
     {
         initializeOpenGL();
